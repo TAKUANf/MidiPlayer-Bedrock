@@ -51,7 +51,7 @@ async function handlePlayMidiCommand(sender, args) {
     }
 
     if (subcommand !== 'play' || !fileName) {
-        sender.sendMessage("§cコマンドの形式が正しくありません。/mc:playmidi help を参照してください。");
+        sender.sendMessage("§cコマンドの形式が正しくありません。/playmidi help を参照してください。");
         return;
     }
 
