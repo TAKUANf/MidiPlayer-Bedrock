@@ -1,12 +1,15 @@
 const express = require('express');
 const cors = require('cors');
 const fs = require('fs');
+const path = require('path');
 const { Midi } = require('@tonejs/midi');
 
 const app = express();
 const port = 3000;
 app.use(cors());
 app.use(express.json());
+
+const MIDI_DIR = './midi';
 
 const instrumentMap = {
     default: 'planks', piano: 'planks', acoustic_bass: 'planks', electric_bass_finger: 'planks',
@@ -147,19 +150,47 @@ async function convertMidiToSimpleNotes(filePath) {
     return notes;
 }
 
+/**
+ * midiフォルダからランダムにファイルを選択する
+ * @returns {string | null}
+ */
+function getRandomMidiFile() {
+    try {
+        if (!fs.existsSync(MIDI_DIR)) return null;
+        const files = fs.readdirSync(MIDI_DIR).filter(file => path.extname(file).toLowerCase() === '.mid');
+        if (files.length === 0) return null;
+        const randomIndex = Math.floor(Math.random() * files.length);
+        return files[randomIndex];
+    } catch (error) {
+        console.error("Error reading MIDI directory:", error);
+        return null;
+    }
+}
+
 // APIエンドポイント: 高度な再生用
 app.get('/midi-sequence', async (req, res) => {
-    const { file, polyphony, legacy } = req.query;
+    let { file, polyphony, legacy } = req.query;
     if (!file) return res.status(400).send({ error: '"file" is required.' });
+
     try {
-        const maxPolyphonyNum = polyphony !== undefined ? parseInt(polyphony) : 8;
-        const sequence = await createOptimizedSoundSequence(`./midi/${file}`, maxPolyphonyNum);
-        if (legacy === 'true') {
-            const rescheduledSequence = rescheduleNotesForClarity(sequence, 5, 2);
-            res.json(rescheduledSequence);
-        } else {
-            res.json(sequence);
+        let chosenFile = file;
+        if (file === 'random') {
+            chosenFile = getRandomMidiFile();
+            if (!chosenFile) return res.status(404).send({ error: 'No MIDI files found.' });
         }
+
+        const maxPolyphonyNum = polyphony !== undefined ? parseInt(polyphony) : 8;
+        const filePath = path.join(MIDI_DIR, chosenFile);
+        const sequence = await createOptimizedSoundSequence(filePath, maxPolyphonyNum);
+        
+        const responsePayload = { fileName: chosenFile, sequence: sequence };
+
+        if (legacy === 'true') {
+            responsePayload.sequence = rescheduleNotesForClarity(sequence, 5, 2);
+        }
+        
+        res.json(responsePayload);
+
     } catch (error) {
         console.error(`Error processing advanced sequence for ${file}:`, error);
         res.status(500).send({ error: error.message });
@@ -168,12 +199,24 @@ app.get('/midi-sequence', async (req, res) => {
 
 // APIエンドポイント: シンプル再生用
 app.get('/midi-simple', async (req, res) => {
-    const { file } = req.query;
+    let { file } = req.query;
     if (!file) return res.status(400).send({ error: '"file" is required.' });
+    
     try {
-        const filePath = `./midi/${file}`;
+        let chosenFile = file;
+        if (file === 'random') {
+            chosenFile = getRandomMidiFile();
+            if (!chosenFile) return res.status(404).send({ error: 'No MIDI files found.' });
+        }
+        
+        const filePath = path.join(MIDI_DIR, chosenFile);
         const simpleNotes = await convertMidiToSimpleNotes(filePath);
-        res.json(simpleNotes);
+
+        res.json({
+            fileName: chosenFile,
+            sequence: simpleNotes
+        });
+
     } catch (error) {
         console.error(`Error processing simple for ${file}:`, error);
         res.status(500).send({ error: error.message });
