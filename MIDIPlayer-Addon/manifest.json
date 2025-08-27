@@ -1,0 +1,29 @@
+{
+    "format_version": 2,
+    "header": {
+        "name": "MIDI to Note Block Player",
+        "description": "Plays MIDI files in Minecraft using Note Block sounds via a Node.js server.",
+        "uuid": "19383c7b-0877-4323-9e97-cb667ecd2547", 
+        "version": [ 1, 0, 0 ],
+        "min_engine_version": [ 1, 20, 80 ]
+    },
+    "modules": [
+        {
+            "type": "script",
+            "language": "javascript",
+            "uuid": "93f1badf-b895-42b4-a66e-0c90358fde34",
+            "version": [ 1, 0, 0 ],
+            "entry": "scripts/main.js"
+        }
+    ],
+    "dependencies": [
+        {
+            "module_name": "@minecraft/server",
+            "version": "2.2.0-beta"
+        },
+        {
+            "module_name": "@minecraft/server-net",
+            "version": "1.0.0-beta" 
+        }
+    ]
+}
